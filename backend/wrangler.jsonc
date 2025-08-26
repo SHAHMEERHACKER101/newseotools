@@ -1,7 +1,11 @@
 {
   "name": "newsseotools1",
   "main": "worker.js",
-  "compatibility_date": "2024-09-25",
+  "compatibility_date": "2025-08-25",
+  "workers_dev": true,
+  "build": {
+    "command": ""
+  },
   "vars": {
     "ENVIRONMENT": "production"
   }
