@@ -1,9 +1,9 @@
 /**
  * NexusRank Pro - FINAL Google Gemini Worker
- * Secure, production-ready, no errors
+ * Secure, production-ready, with debug logs
  */
 
-// ✅ Allowed origins (your frontend)
+// ✅ Allowed origins (NO TRAILING SPACES!)
 const ALLOWED_ORIGINS = [
   'https://newseotools.pages.dev',
   'http://localhost:5000'
@@ -74,13 +74,17 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    // 🔥 DEBUG LOGS — DO NOT REMOVE
     console.log('🔍 Incoming request to:', path);
-console.log('🔑 API Key exists:', !!env.GEMINI_API_KEY);
-if (env.GEMINI_API_KEY) {
-  console.log('🔑 First 4 chars:', env.GEMINI_API_KEY.substring(0, 4));
-} else {
-  console.log('❌ API Key is MISSING!');
-}
+    console.log('🌐 Method:', request.method);
+    console.log('📤 Origin:', request.headers.get('Origin'));
+    console.log('🔑 GEMINI_API_KEY exists:', !!env.GEMINI_API_KEY);
+    if (env.GEMINI_API_KEY) {
+      console.log('🔑 First 4 chars:', env.GEMINI_API_KEY.substring(0, 4));
+    } else {
+      console.log('❌ GEMINI_API_KEY is MISSING!');
+    }
 
     // ✅ Handle CORS preflight
     if (request.method === 'OPTIONS') return handleOptions(request);
@@ -96,6 +100,7 @@ if (env.GEMINI_API_KEY) {
     // ✅ Check if endpoint exists
     const config = TOOL_CONFIGS[path];
     if (!config) {
+      console.log('❌ Unknown endpoint:', path);
       return new Response(JSON.stringify({
         error: 'Endpoint not found',
         available: Object.keys(TOOL_CONFIGS)
@@ -109,7 +114,9 @@ if (env.GEMINI_API_KEY) {
     let data;
     try {
       data = await request.json();
+      console.log('📄 Input text received:', data.text?.substring(0, 100) + '...');
     } catch (e) {
+      console.error('❌ Failed to parse JSON:', e);
       return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
         status: 400,
         headers: getCorsHeaders(request)
@@ -118,6 +125,7 @@ if (env.GEMINI_API_KEY) {
 
     const text = data.text || data.prompt || '';
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      console.error('❌ No text provided');
       return new Response(JSON.stringify({ error: 'Text input is required' }), {
         status: 400,
         headers: getCorsHeaders(request)
@@ -127,7 +135,7 @@ if (env.GEMINI_API_KEY) {
     // ✅ Get API key
     const apiKey = env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error('GEMINI_API_KEY not set');
+      console.error('🛑 FATAL: GEMINI_API_KEY is NOT SET');
       return new Response(JSON.stringify({ error: 'AI service configuration error' }), {
         status: 500,
         headers: getCorsHeaders(request)
@@ -135,6 +143,7 @@ if (env.GEMINI_API_KEY) {
     }
 
     try {
+      // ✅ Call Gemini API
       const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,7 +164,7 @@ if (env.GEMINI_API_KEY) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Gemini API error:', response.status, errorText);
+        console.error('❌ Gemini API error:', response.status, errorText);
         return new Response(JSON.stringify({ error: 'AI service unavailable' }), {
           status: 503,
           headers: getCorsHeaders(request)
@@ -166,12 +175,14 @@ if (env.GEMINI_API_KEY) {
       const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
       if (!aiText) {
+        console.error('❌ Empty AI response:', result);
         return new Response(JSON.stringify({ error: 'Empty AI response' }), {
           status: 500,
           headers: getCorsHeaders(request)
         });
       }
 
+      // ✅ Success!
       return new Response(JSON.stringify({
         success: true,
         content: aiText,
@@ -186,7 +197,7 @@ if (env.GEMINI_API_KEY) {
       });
 
     } catch (error) {
-      console.error('Worker error:', error);
+      console.error('🚨 Worker error:', error);
       return new Response(JSON.stringify({ error: 'Internal server error' }), {
         status: 500,
         headers: getCorsHeaders(request)
