@@ -74,6 +74,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+    console.log('🔍 Incoming request to:', path);
+console.log('🔑 API Key exists:', !!env.GEMINI_API_KEY);
+if (env.GEMINI_API_KEY) {
+  console.log('🔑 First 4 chars:', env.GEMINI_API_KEY.substring(0, 4));
+} else {
+  console.log('❌ API Key is MISSING!');
+}
 
     // ✅ Handle CORS preflight
     if (request.method === 'OPTIONS') return handleOptions(request);
