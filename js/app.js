@@ -1,12 +1,13 @@
 /**
- * NexusRank Pro - Final AI SEO Toolkit
- * Secure, production-ready, no errors
+ * NexusRank Pro - Enhanced AI SEO Toolkit
+ * Advanced AI-powered tools for professional content creation
  */
 
 class NexusRankApp {
   constructor() {
-    // ✅ Fixed URL (no trailing spaces!)
+    // ✅ API Configuration
     this.apiBaseUrl = 'https://newsseotools1.shahshameer383.workers.dev';
+    this.patreonUrl = 'https://www.patreon.com/posts/seo-tools-137228615?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=postshare_creator&utm_content=join_link';
 
     this.currentTool = null;
     this.isProUser = false;
@@ -67,6 +68,15 @@ class NexusRankApp {
       });
     }
 
+    // Unlimited Access button
+    const unlimitedBtn = document.getElementById('unlimited-access-btn');
+    if (unlimitedBtn) {
+      unlimitedBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open(this.patreonUrl, '_blank');
+      });
+    }
+
     // Tool cards
     const toolCards = document.querySelectorAll('.tool-card');
     toolCards.forEach(card => {
@@ -102,6 +112,7 @@ class NexusRankApp {
     const copyBtn = document.getElementById('copy-output');
     const downloadBtn = document.getElementById('download-output');
     const proLoginBtn = document.getElementById('pro-login-btn');
+    const unlimitedAccessBtn = document.getElementById('unlimited-access-modal-btn');
 
     // Close modals
     document.querySelectorAll('.modal-close').forEach(close => {
@@ -146,6 +157,13 @@ class NexusRankApp {
     // Pro login
     if (proLoginBtn) {
       proLoginBtn.addEventListener('click', () => this.handleProLogin());
+    }
+
+    // Unlimited access button in modal
+    if (unlimitedAccessBtn) {
+      unlimitedAccessBtn.addEventListener('click', () => {
+        window.open(this.patreonUrl, '_blank');
+      });
     }
 
     // Enter key for login
@@ -229,7 +247,7 @@ class NexusRankApp {
     }
 
     if (usageCount) {
-      const remaining = this.isProUser ? '∞' : Math.max(0, 2 - this.usageData[toolName]);
+      const remaining = this.isProUser ? '∞' : Math.max(0, 1 - this.usageData[toolName]);
       usageCount.textContent = remaining;
     }
 
@@ -240,39 +258,39 @@ class NexusRankApp {
   getToolConfig(toolName) {
     const configs = {
       'seo-write': {
-        title: 'AI SEO Writer',
-        placeholder: 'Enter your topic or keywords for the SEO article (e.g., "Benefits of yoga for mental health", "Digital marketing strategies 2025")...',
+        title: 'Advanced AI SEO Writer',
+        placeholder: 'Enter your topic or keywords for a comprehensive, SEO-optimized article (e.g., "Benefits of yoga for mental health", "Digital marketing strategies 2025")...',
         endpoint: '/ai/seo-write'
       },
       'humanize': {
-        title: 'AI Humanizer',
-        placeholder: 'Paste AI-generated text that you want to humanize and make sound more natural...',
+        title: 'AI Text Humanizer',
+        placeholder: 'Paste AI-generated text to transform into natural, human-like content that passes all detection tools...',
         endpoint: '/ai/humanize'
       },
       'detect': {
-        title: 'AI Detector',
-        placeholder: 'Paste text to analyze for AI content detection and get probability scores...',
+        title: 'Advanced AI Detector',
+        placeholder: 'Paste text to analyze for AI-generated content with detailed probability scoring and analysis...',
         endpoint: '/ai/detect'
       },
       'paraphrase': {
-        title: 'Paraphrasing Tool',
-        placeholder: 'Enter text that you want to paraphrase and rewrite in a unique way...',
+        title: 'Professional Paraphrasing Tool',
+        placeholder: 'Enter text to rewrite into completely unique, high-quality content while preserving the original meaning...',
         endpoint: '/ai/paraphrase'
       },
       'grammar': {
-        title: 'Grammar Checker',
-        placeholder: 'Paste text to check and fix grammar, spelling, and punctuation errors...',
+        title: 'Advanced Grammar Checker',
+        placeholder: 'Paste text to fix grammar, spelling, punctuation and enhance professional quality...',
         endpoint: '/ai/grammar'
       },
       'improve': {
-        title: 'Text Improver',
-        placeholder: 'Enter text that you want to improve for better clarity, fluency, and professionalism...',
+        title: 'Professional Text Improver',
+        placeholder: 'Enter text to enhance clarity, engagement, and professionalism for maximum impact...',
         endpoint: '/ai/improve'
       }
     };
 
     return configs[toolName] || {
-      title: 'AI Tool',
+      title: 'Advanced AI Tool',
       placeholder: 'Enter your text...',
       endpoint: '/ai/improve'
     };
@@ -290,7 +308,8 @@ class NexusRankApp {
       return;
     }
 
-    if (!this.isProUser && this.usageData[this.currentTool] >= 2) {
+    // ✅ CHANGED: Show pro modal after 1 free use (instead of 2)
+    if (!this.isProUser && this.usageData[this.currentTool] >= 1) {
       this.showProModal();
       return;
     }
@@ -312,7 +331,7 @@ class NexusRankApp {
           this.saveUsageData();
           this.updateUsageDisplay();
         }
-        this.showToast('Content processed successfully!', 'success');
+        this.showToast('Content processed successfully with advanced AI!', 'success');
       } else {
         this.showToast(result.error || 'Failed to process text.', 'error');
       }
@@ -389,7 +408,7 @@ class NexusRankApp {
   updateUsageDisplay() {
     const usageCount = document.getElementById('usage-count');
     if (usageCount && this.currentTool) {
-      const remaining = this.isProUser ? '∞' : Math.max(0, 2 - this.usageData[this.currentTool]);
+      const remaining = this.isProUser ? '∞' : Math.max(0, 1 - this.usageData[this.currentTool]);
       usageCount.textContent = remaining;
     }
   }
@@ -436,14 +455,13 @@ class NexusRankApp {
     const username = document.getElementById('pro-username')?.value;
     const password = document.getElementById('pro-password')?.value;
 
-    if (username === 'prouser606' && password === 'tUChSUZ7drfMkYm') {
-      this.setProStatus(true);
-      this.closeModals();
-      this.updateUsageDisplay();
-      this.showToast('Welcome to Pro! You now have unlimited access.', 'success');
-    } else {
-      this.showToast('Invalid credentials. Use the demo credentials provided.', 'error');
+    if (!username || !password) {
+      this.showToast('Please enter your Pro credentials. Contact support for Pro access after payment.', 'warning');
+      return;
     }
+
+    // This would be replaced with actual authentication
+    this.showToast('Pro authentication is available after payment. Please contact support for credentials.', 'info');
   }
 
   showToast(message, type = 'info') {

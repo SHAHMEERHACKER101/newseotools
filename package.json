@@ -1,14 +1,23 @@
 {
-  "name": "workspace",
-  "version": "1.0.0",
+  "name": "nexusrank-pro",
+  "version": "2.0.0",
+  "description": "Advanced AI-Powered SEO Toolkit for Professional Content Creation",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "echo \"Development server not needed for static site\"",
+    "build": "echo \"Static site ready for deployment\"",
+    "deploy": "echo \"Deploy to Cloudflare Pages\""
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "AI", 
+    "SEO", 
+    "content creation", 
+    "artificial intelligence",
+    "writing tools",
+    "text processing"
+  ],
+  "author": "NexusRank Pro",
+  "license": "MIT",
   "dependencies": {
     "@google/genai": "^1.15.0"
   }

@@ -1,0 +1,10 @@
+# Redirects for NexusRank Pro
+
+# Redirect old paths to new structure
+/about /pages/about.html 200
+/contact /pages/contact.html 200
+/privacy /pages/privacy.html 200
+/terms /pages/terms.html 200
+
+# Handle missing pages gracefully
+/pages/* /pages/about.html 404

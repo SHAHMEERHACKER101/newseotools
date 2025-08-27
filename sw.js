@@ -1,283 +1,123 @@
-/**
- * NexusRank Pro - FINAL Service Worker
- * Production-ready, no errors, supports offline & PWA
- */
+// Service Worker for NexusRank Pro
+// Enables offline functionality and caching
 
 const CACHE_NAME = 'nexusrank-pro-v2.0.0';
-const API_CACHE_NAME = 'nexusrank-api-v2.0.0';
+const STATIC_CACHE = 'nexusrank-static-v2.0.0';
 
-// ✅ Static files to cache
-const STATIC_CACHE_FILES = [
+// Files to cache for offline access
+const STATIC_FILES = [
   '/',
   '/index.html',
   '/css/style.css',
   '/js/app.js',
-  '/manifest.json',
-  '/sw.js',
-  '/favicon.ico',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
   '/pages/about.html',
   '/pages/contact.html',
-  '/pages/privacy.html',
-  '/pages/terms.html',
-  '/pages/cookie-policy.html'
+  'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Segoe+UI:wght@300;400;500;600;700&display=swap',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// ✅ Cacheable API endpoints (non-AI)
-const CACHEABLE_API_PATTERNS = [
-  /\/health$/,
-  /\/status$/
-];
-
-// Install event — cache static files
-self.addEventListener('install', event => {
-  console.log('[SW] Installing Service Worker v2.0.0');
+// Install event - cache static files
+self.addEventListener('install', (event) => {
+  console.log('Service Worker: Installing...');
+  
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_CACHE_FILES);
+    caches.open(STATIC_CACHE)
+      .then((cache) => {
+        console.log('Service Worker: Caching static files...');
+        return cache.addAll(STATIC_FILES);
       })
       .then(() => {
-        console.log('[SW] All static assets cached');
-        return self.skipWaiting(); // Activate immediately
+        console.log('Service Worker: Static files cached successfully');
+        return self.skipWaiting();
       })
-      .catch(err => {
-        console.error('[SW] Cache installation failed:', err);
+      .catch((error) => {
+        console.error('Service Worker: Error caching static files:', error);
       })
   );
 });
 
-// Activate event — clean up old caches
-self.addEventListener('activate', event => {
-  console.log('[SW] Activating Service Worker v2.0.0');
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker: Activating...');
+  
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME && key !== API_CACHE_NAME)
-          .map(key => caches.delete(key))
-      );
-    })
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== STATIC_CACHE && cacheName !== CACHE_NAME) {
+              console.log('Service Worker: Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+      .then(() => {
+        console.log('Service Worker: Activated successfully');
+        return self.clients.claim();
+      })
   );
-  event.waitUntil(self.clients.claim()); // Take control immediately
 });
 
-// Fetch event — route requests
-self.addEventListener('fetch', event => {
-  const request = event.request;
-  const url = new URL(request.url);
-
-  // Skip non-GET or chrome-extension requests
-  if (request.method !== 'GET' || url.protocol === 'chrome-extension:') {
+// Fetch event - serve from cache when offline
+self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests and API calls
+  if (!event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
-  // Route requests
-  if (isStaticResource(url)) {
-    event.respondWith(handleStaticResource(request));
-  } else if (isAPIRequest(url)) {
-    event.respondWith(handleAPIRequest(request));
-  } else if (isNavigationRequest(request)) {
-    event.respondWith(handleNavigationRequest(request));
-  } else {
-    event.respondWith(fetch(request));
+  // Skip API calls to the worker
+  if (event.request.url.includes('shahshameer383.workers.dev')) {
+    return;
   }
-});
 
-// ✅ Is static resource?
-function isStaticResource(url) {
-  const pathname = url.pathname;
-  return (
-    pathname === '/' ||
-    pathname.endsWith('.html') ||
-    pathname.endsWith('.css') ||
-    pathname.endsWith('.js') ||
-    pathname.endsWith('.json') ||
-    pathname.endsWith('.ico') ||
-    pathname.endsWith('.png') ||
-    pathname.endsWith('.jpg') ||
-    pathname.endsWith('.jpeg') ||
-    pathname.endsWith('.gif') ||
-    pathname.endsWith('.svg') ||
-    pathname.endsWith('.woff') ||
-    pathname.endsWith('.woff2') ||
-    pathname.endsWith('.ttf')
+  event.respondWith(
+    caches.match(event.request)
+      .then((cachedResponse) => {
+        // Return cached version if available
+        if (cachedResponse) {
+          console.log('Service Worker: Serving from cache:', event.request.url);
+          return cachedResponse;
+        }
+
+        // Otherwise fetch from network
+        return fetch(event.request)
+          .then((response) => {
+            // Check if valid response
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            // Clone the response
+            const responseToCache = response.clone();
+
+            // Add to cache for future use
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+
+            return response;
+          })
+          .catch((error) => {
+            console.log('Service Worker: Network request failed:', error);
+            
+            // Return offline page for navigation requests
+            if (event.request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+            
+            throw error;
+          });
+      })
   );
-}
+});
 
-// ✅ Is API request?
-function isAPIRequest(url) {
-  return url.pathname.startsWith('/ai/') ||
-         url.pathname.startsWith('/api/') ||
-         url.pathname === '/health';
-}
-
-// ✅ Is navigation request?
-function isNavigationRequest(request) {
-  return request.mode === 'navigate' ||
-         (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'));
-}
-
-// ✅ Handle static resources (cache-first)
-async function handleStaticResource(request) {
-  try {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
-    console.error('[SW] Static fetch failed:', error);
-    throw error;
-  }
-}
-
-// ✅ Handle API requests (network-first)
-async function handleAPIRequest(request) {
-  const url = new URL(request.url);
-
-  // AI endpoints: always network
-  if (url.pathname.startsWith('/ai/')) {
-    try {
-      return await fetch(request);
-    } catch (error) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'AI service unavailable. You are offline.',
-        offline: true
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-  }
-
-  // Health/status: cache with TTL
-  if (CACHEABLE_API_PATTERNS.some(p => p.test(url.pathname))) {
-    try {
-      const response = await fetch(request);
-      if (response.ok) {
-        const cache = await caches.open(API_CACHE_NAME);
-        const headers = new Headers(response.headers);
-        headers.set('sw-cache-timestamp', Date.now().toString());
-        const cachedResponse = new Response(response.clone().body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers
-        });
-        cache.put(request, cachedResponse);
-      }
-      return response;
-    } catch (error) {
-      const cached = await caches.match(request);
-      const timestamp = cached?.headers.get('sw-cache-timestamp');
-      const age = Date.now() - parseInt(timestamp || '0');
-      if (cached && age < 5 * 60 * 1000) {
-        return cached;
-      }
-      throw error;
-    }
-  }
-
-  return fetch(request);
-}
-
-// ✅ Handle navigation (network-first, fallback to cache)
-async function handleNavigationRequest(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-
-    const index = await caches.match('/index.html');
-    if (index) return index;
-
-    return new Response(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <title>Offline - NexusRank Pro</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #000;
-            color: #fff;
-            text-align: center;
-            padding: 2rem;
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-          }
-          .offline-icon {
-            font-size: 4rem;
-            color: #00ffff;
-          }
-          h1 {
-            color: #00ffff;
-            margin: 1rem 0;
-          }
-          p {
-            color: #cccccc;
-            margin: 0 0 1.5rem;
-          }
-          .retry-btn {
-            background: #00ffff;
-            color: #000;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: transform 0.2s;
-          }
-          .retry-btn:hover {
-            transform: translateY(-2px);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="offline-container">
-          <div class="offline-icon">🚀</div>
-          <h1>You're Offline</h1>
-          <p>Some features may not be available without internet.</p>
-          <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
-        </div>
-      </body>
-      </html>
-    `, { headers: { 'Content-Type': 'text/html' } });
-  }
-}
-
-// ✅ Message handling (for app control)
-self.addEventListener('message', event => {
-  switch (event.data.type) {
-    case 'SKIP_WAITING':
-      self.skipWaiting();
-      break;
-    case 'CLEAR_CACHE':
-      caches.keys().then(keys => {
-        keys.forEach(key => caches.delete(key));
-      });
-      break;
-    default:
-      console.log('[SW] Unknown message type:', event.data.type);
+// Handle messages from the main thread
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
-console.log('[SW] Service Worker v2.0.0 loaded and ready');
+console.log('Service Worker: Loaded successfully');
