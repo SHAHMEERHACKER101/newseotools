@@ -37,18 +37,41 @@ const server = http.createServer((req, res) => {
         pathname = '/index.html';
     }
     
-    // Handle clean URLs - redirect to HTML files
-    if (pathname === '/about') pathname = '/pages/about.html';
-    else if (pathname === '/contact') pathname = '/pages/contact.html';
-    else if (pathname === '/privacy') pathname = '/pages/privacy.html';
-    else if (pathname === '/terms') pathname = '/pages/terms.html';
-    else if (pathname === '/cookie-policy') pathname = '/pages/cookie-policy.html';
+    // Handle clean URLs - redirect to HTML files in pages folder
+    else if (pathname === '/about') {
+        pathname = '/pages/about.html';
+    }
+    else if (pathname === '/contact') {
+        pathname = '/pages/contact.html';
+    }
+    else if (pathname === '/privacy') {
+        pathname = '/pages/privacy.html';
+    }
+    else if (pathname === '/terms') {
+        pathname = '/pages/terms.html';
+    }
+    else if (pathname === '/cookie-policy') {
+        pathname = '/pages/cookie-policy.html';
+    }
 
     const filePath = path.join(__dirname, pathname);
     
     // Check if file exists
     fs.access(filePath, fs.constants.F_OK, (err) => {
         if (err) {
+            // File not found - try to redirect .html URLs to clean URLs
+            if (pathname.endsWith('.html')) {
+                const cleanPath = pathname.replace('.html', '');
+                if (cleanPath === '/pages/about' || cleanPath === '/pages/contact' || 
+                    cleanPath === '/pages/privacy' || cleanPath === '/pages/terms' || 
+                    cleanPath === '/pages/cookie-policy') {
+                    const redirectTo = cleanPath.replace('/pages', '');
+                    res.writeHead(301, { 'Location': redirectTo });
+                    res.end();
+                    return;
+                }
+            }
+            
             // File not found
             res.writeHead(404, { 'Content-Type': 'text/html' });
             res.end('<h1>404 - File Not Found</h1>');
